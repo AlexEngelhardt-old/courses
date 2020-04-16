@@ -1,5 +1,7 @@
+import numpy as np
 import pandas as pd
 from scipy.stats import norm
+from scipy.optimize import minimize
 
 
 def drawdown(return_series: pd.Series):
@@ -136,3 +138,112 @@ def sharpe_ratio(r, riskfree_rate, periods_per_year):
     ann_ex_ret = annualize_rets(excess_return, periods_per_year)
     ann_vol = annualize_vol(r, periods_per_year)
     return ann_ex_ret / ann_vol
+
+
+def portfolio_return(weights, returns):
+    """
+    Given asset returns and a weight vector, returns the portfolio return
+    """
+    return weights.T @ returns  # (weights * returns).sum()
+
+
+def portfolio_vol(weights, cov):
+    return (weights.T @ cov @ weights) ** 0.5
+
+
+def plot_ef2(n_points, expected_returns, covariance_matrix, style='.-'):
+    """Plots the efficient frontier for two assets"""
+
+    if expected_returns.shape != (2,) or covariance_matrix.shape != (2, 2):
+        raise ValueError("plot_ef2 can only plot 2-asset frontiers!")
+
+    weights = [np.array([w, 1-w]) for w in np.linspace(0, 1, n_points)]
+
+    rets = [portfolio_return(w, expected_returns) for w in weights]
+    vols = [portfolio_vol(w, covariance_matrix) for w in weights]
+
+    ef = pd.DataFrame({"Returns": rets, "Volatility": vols})
+
+    return ef.plot.line('Volatility', 'Returns', style=style)
+
+
+def minimize_vol(target_return, expected_returns, covariance_matrix):
+    """From a target return, go to a weight vector that achieves that return with
+    the minimum volatility. I.e., find the point on the efficient frontier for
+    that.
+
+    """
+    n = expected_returns.shape[0]
+    initial_guess = np.repeat(1/n, n)
+
+    # #### Constraints
+
+    # bounds: weights should not go below zero (shorting) or above one
+    # (leveraged long).
+    # scipy expects a set of bounds per parameter (i.e. weight) to optimize
+    bounds = ((0.0, 1.0),) * n
+
+    # Total return should be 'return' (see docs:
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html)
+    return_is_target = {
+        'type': 'eq',
+        'args': (expected_returns,),
+        # w: weights
+        # er: expected_returns
+        'fun': lambda w, er: target_return - portfolio_return(w, er)
+    }
+
+    # Weights must sum to 1
+    weights_sum_to_1 = {
+        'type': 'eq',
+        'fun': lambda weights: np.sum(weights) - 1
+    }
+
+    results = minimize(
+        fun=portfolio_vol,  # objective function we want to minimize
+        x0=initial_guess,
+        args=(covariance_matrix,),
+        bounds=bounds,  # each weight must be in [0, 1]
+        constraints=(return_is_target, weights_sum_to_1),
+        method="SLSQP",  # quadratic programming solver
+        options={'disp': False},  # make the output non-verbose
+    )
+
+    return results.x
+
+
+def optimal_weights(n_points, expected_returns, covariance_matrix):
+    """Creates a list of weight vectors to run the optimizer on
+    to minimize the volatility per expected return.
+    Is used in plot_ef()"""
+
+    # The EF's min is the minimum of all target returns (without shorting etc),
+    # and its max is the maximum of all target returns
+    target_returns = np.linspace(
+        expected_returns.min(), expected_returns.max(), n_points
+    )
+    weights = [
+        minimize_vol(tr, expected_returns, covariance_matrix)
+        for tr in target_returns
+    ]
+
+    return weights
+
+
+def plot_ef(n_points, expected_returns, covariance_matrix, style='.-'):
+    """Plots the efficient frontier for n assets"""
+
+    # The major change from 2 to n assets is finding the correct weights
+    # that result *on* the efficient frontier
+    # For that, you'll need to minimize the volatility for each target return,
+    #   and get the weights that do that.
+    weights = optimal_weights(n_points, expected_returns, covariance_matrix)
+
+    rets = [portfolio_return(w, expected_returns) for w in weights]
+    vols = [portfolio_vol(w, covariance_matrix) for w in weights]
+
+    ef = pd.DataFrame({"Returns": rets, "Volatility": vols})
+
+    ax = ef.plot.line('Volatility', 'Returns', style='.-')
+    ax.scatter(np.sqrt(np.diag(covariance_matrix)), expected_returns, c="red")
+    return ax
