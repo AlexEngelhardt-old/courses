@@ -3,6 +3,9 @@ import pandas as pd
 from scipy.stats import norm
 from scipy.optimize import minimize
 
+# ################################################################
+# Week 1
+
 
 def drawdown(return_series: pd.Series):
     """Takes a time series of asset returns.
@@ -88,9 +91,17 @@ def kurtosis(r):
     return exp/sigma_r**4
 
 
+def var_historic(r, level=5):
+    """
+    Returns the historic VaR
+    """
+
+    return -np.percentile(r, level)
+
+
 def var_gaussian(r, level=5, modified=False):
     """
-    Returns the Parametric Gauusian VaR of a Series or DataFrame
+    Returns the Parametric Gaussian VaR of a Series or DataFrame
     If "modified" is True, then the modified VaR is returned,
     using the Cornish-Fisher modification
     """
@@ -109,6 +120,7 @@ def var_gaussian(r, level=5, modified=False):
     return -(r.mean() + z*r.std(ddof=0))
 
 
+# ################################################################
 # Week 2
 
 def annualize_rets(r, periods_per_year):
@@ -230,8 +242,69 @@ def optimal_weights(n_points, expected_returns, covariance_matrix):
     return weights
 
 
-def plot_ef(n_points, expected_returns, covariance_matrix, style='.-'):
-    """Plots the efficient frontier for n assets"""
+def msr(riskfree_rate, expected_returns, covariance_matrix):
+    """Compute the weights for the Maximum Sharpe Ratio portfolio
+    """
+    n = expected_returns.shape[0]
+    initial_guess = np.repeat(1/n, n)
+
+    # #### Constraints
+
+    # bounds: weights should not go below zero (shorting) or above one
+    # (leveraged long).
+    # scipy expects a set of bounds per parameter (i.e. weight) to optimize
+    bounds = ((0.0, 1.0),) * n
+
+    # Weights must sum to 1
+    weights_sum_to_1 = {
+        'type': 'eq',
+        'fun': lambda weights: np.sum(weights) - 1
+    }
+
+    def neg_sharpe_ratio(weights, riskfree_rate, er, cov):
+        r = portfolio_return(weights, er)
+        vol = portfolio_vol(weights, cov)
+        sharpe = (r - riskfree_rate) / vol
+        return -sharpe
+
+    results = minimize(
+        fun=neg_sharpe_ratio,  # objective function we want to minimize
+        x0=initial_guess,
+        args=(riskfree_rate, expected_returns, covariance_matrix),
+        bounds=bounds,  # each weight must be in [0, 1]
+        constraints=(weights_sum_to_1),
+        method="SLSQP",  # quadratic programming solver
+        options={'disp': False},  # make the output non-verbose
+    )
+
+    return results.x
+
+
+def gmv(cov):
+    """Returns the weights of the global minimum variance portfolio
+    given a covariance matrix"""
+
+    # Dirty trick: Get the MSR portfolio if all expected returns are the same
+    # Then the optimizer can only improve the Sharpe ratio if he minimizes the
+    # volatility :D
+    # def msr(riskfree_rate, expected_returns, covariance_matrix):
+    n = cov.shape[0]
+    return msr(
+        riskfree_rate=0.12345,  # not used anyway
+        expected_returns=np.repeat(1, n),
+        covariance_matrix=cov
+    )
+
+
+def plot_ef(n_points, expected_returns, covariance_matrix,
+            show_cml=False, riskfree_rate=0, style='.-',
+            show_ew=False, show_gmv=False):
+    """Plots the efficient frontier for n assets.
+    show_cml: Show the Capital Market Line from the riskfree rate (vol=0)
+              to the MSR portfolio
+    show_ew:  Show the point for the equal-weighted portfolio.
+    show_gmv: Show the global minimum variance portfolio
+    """
 
     # The major change from 2 to n assets is finding the correct weights
     # that result *on* the efficient frontier
@@ -244,6 +317,38 @@ def plot_ef(n_points, expected_returns, covariance_matrix, style='.-'):
 
     ef = pd.DataFrame({"Returns": rets, "Volatility": vols})
 
-    ax = ef.plot.line('Volatility', 'Returns', style='.-')
+    # Plot the EF
+    ax = ef.plot.line('Volatility', 'Returns', style=style)
+
+    # Add the individual securities
     ax.scatter(np.sqrt(np.diag(covariance_matrix)), expected_returns, c="red")
+
+    # Add the equally-weighted portfolio point
+    if show_ew:
+        n = expected_returns.shape[0]
+        w_ew = np.repeat(1/n, n)
+        r_ew = portfolio_return(w_ew, expected_returns)
+        vol_ew = portfolio_vol(w_ew, covariance_matrix)
+        ax.plot(vol_ew, r_ew, color='goldenrod', marker="o", markersize=12)
+
+    # Add the Global Minimum Variance portfolio
+    if show_gmv:
+        w_gmv = gmv(covariance_matrix)
+        r_gmv = portfolio_return(w_gmv, expected_returns)
+        vol_gmv = portfolio_vol(w_gmv, covariance_matrix)
+        ax.plot(vol_gmv, r_gmv, color='midnightblue',
+                marker="o", markersize=12)
+
+    # Add the Capital Market Line (CML)
+    if show_cml:
+        ax.set_xlim(left=0)
+        w_msr = msr(riskfree_rate, expected_returns, covariance_matrix)
+        r_msr = portfolio_return(w_msr, expected_returns)
+        vol_msr = portfolio_vol(w_msr, covariance_matrix)
+        # Two x and y coordinates for the CML
+        cml_x = [0, vol_msr]
+        cml_y = [riskfree_rate, r_msr]
+        ax.plot(cml_x, cml_y, color="green",
+                marker="o", linestyle="dashed", markersize=6, linewidth=2)
+
     return ax
