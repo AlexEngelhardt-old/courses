@@ -352,3 +352,26 @@ def plot_ef(n_points, expected_returns, covariance_matrix,
                 marker="o", linestyle="dashed", markersize=6, linewidth=2)
 
     return ax
+
+
+# ################################################################
+# Week 3
+
+def get_ind_size():
+    """This table holds the average size of the companies
+    in this industry
+    """
+    ind = pd.read_csv('../data/ind30_m_size.csv', index_col=0)
+    ind.index = pd.to_datetime(ind.index, format="%Y%m").to_period('M')
+    ind.columns = ind.columns.str.strip()
+    return ind
+
+
+def get_ind_nfirms():
+    """This table holds the number of firms
+    in this industry
+    """
+    ind = pd.read_csv('../data/ind30_m_nfirms.csv', index_col=0)
+    ind.index = pd.to_datetime(ind.index, format="%Y%m").to_period('M')
+    ind.columns = ind.columns.str.strip()
+    return ind
