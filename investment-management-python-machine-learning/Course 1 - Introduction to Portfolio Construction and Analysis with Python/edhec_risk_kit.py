@@ -498,3 +498,32 @@ def summary_stats(r, riskfree_rate=0.03):
         "Sharpe Ratio": ann_sr,
         "Max Drawdown": dd
     })
+
+
+def gbm(n_years=10, n_scenarios=1000, mu=0.07, sigma=0.15,
+        steps_per_year=12, s_0=100.0, prices=True):
+    """A discretized (to `steps_per_year`) Geometric Brownian Motion generator.
+    It simulates the evolution of a stock price.
+    The mu and sigma defaults are annualized returns for the stock market.
+    s_0 is the starting stock price.
+    prices: Return the stock prices or just the returns?
+    """
+
+    # delta-time:
+    dt = 1/steps_per_year
+    # +1 cuz we fix the first step's return to 1 later so we can start at 100:
+    n_steps = int(n_years * steps_per_year) + 1
+
+    # Generate a table: Each row is the new stock price, and each column is one
+    # possible scenario:
+    rets_plus_1 = np.random.normal(
+        loc=(1+mu)**dt,
+        scale=(sigma*np.sqrt(dt)),
+        size=(n_steps, n_scenarios)
+    )
+    rets_plus_1[0] = 1  # start the time series with price=10, not price=10.31
+    # To prices if desired:
+    if prices:
+        return s_0*pd.DataFrame(rets_plus_1).cumprod()
+    else:
+        return rets_plus_1 - 1
