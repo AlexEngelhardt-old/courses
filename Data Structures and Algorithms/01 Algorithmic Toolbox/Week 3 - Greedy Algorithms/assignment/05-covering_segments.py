@@ -36,10 +36,6 @@ def optimal_points(segments):
     return points
 
 
-data = list(map(int, '4 7 1 3 2 5 5 6'.split()))
-segments = list(map(lambda x: {'start': x[0], 'end': x[1], 'visited': False}, zip(data[::2], data[1::2])))
-points = optimal_points(segments)
-
 if __name__ == '__main__':
     input = sys.stdin.read()
     n, *data = map(int, input.split())

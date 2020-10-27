@@ -1,4 +1,7 @@
+.idea
 .ipynb_checkpoints
 __pycache__
 Graded Quiz.ipynb
-Data Structures and Algorithms/01 Algorithmic Toolbox/course materials/
+Data Structures and Algorithms/01 Algorithmic Toolbox/Course Materials/
+*.pdf
+*.zip
