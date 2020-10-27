@@ -8,16 +8,7 @@ def rfill(number, to_length):
 
 
 def weird_greater_than_or_equal(x, y):
-    x = str(x)
-    y = str(y)
-    strlen = max(len(x), len(y))
-
-    # If one number is shorter, fill the right end up with the first digit
-    x = rfill(x, strlen)
-    y = rfill(y, strlen)
-
-    # Now do string comparison (each character starting left)
-    return x >= y
+    return (str(x)+str(y)) >= (str(y)+str(x))
 
 
 def largest_number(a):
