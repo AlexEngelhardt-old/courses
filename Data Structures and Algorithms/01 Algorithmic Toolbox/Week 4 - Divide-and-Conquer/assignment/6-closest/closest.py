@@ -3,8 +3,8 @@ import math
 
 
 def minimum_distance(x, y):
-
-    return math.sqrt(2)
+    # TODO :)
+    return 3.14
 
 
 if __name__ == '__main__':
