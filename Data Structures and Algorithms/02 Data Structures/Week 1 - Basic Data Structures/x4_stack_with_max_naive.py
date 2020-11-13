@@ -1,7 +1,8 @@
-#python3
+from collections import deque
 import sys
 
-class StackWithMax():
+
+class StackWithMaxNaive():
     def __init__(self):
         self.__stack = []
 
@@ -15,6 +16,25 @@ class StackWithMax():
     def Max(self):
         assert(len(self.__stack))
         return max(self.__stack)
+
+
+class StackWithMax():
+    def __init__(self):
+        self.stack = deque()
+        self.max_stack = deque()
+
+    def Push(self, a):
+        self.stack.append(a)
+        if not self.max_stack or a >= self.max_stack[-1]:  # must be __geq__, because we can have duplicate maxima, then keep previous ones!
+            self.max_stack.append(a)
+
+    def Pop(self):
+        last = self.stack.pop()
+        if self.max_stack and last == self.max_stack[-1]:
+            self.max_stack.pop()
+
+    def Max(self):
+        return self.max_stack[-1]
 
 
 if __name__ == '__main__':
@@ -31,4 +51,4 @@ if __name__ == '__main__':
         elif query[0] == "max":
             print(stack.Max())
         else:
-            assert(0)
+            assert 0

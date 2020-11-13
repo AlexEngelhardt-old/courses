@@ -1,5 +1,3 @@
-# python3
-
 
 def max_sliding_window_naive(sequence, m):
     maximums = []
@@ -7,6 +5,11 @@ def max_sliding_window_naive(sequence, m):
         maximums.append(max(sequence[i:i + m]))
 
     return maximums
+
+
+def max_sliding_window(sequence, m):
+    return [1, 2, 3]
+
 
 if __name__ == '__main__':
     n = int(input())
