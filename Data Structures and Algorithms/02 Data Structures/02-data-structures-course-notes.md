@@ -398,7 +398,24 @@ Then the operations can be implemented:
   - The rank array gets messed up, but that's okay (details in the Analysis
     video)
 
+
 ### Week 4 - Hash Tables
+
+##### Introduction, Direct Addressing and Chaining
+
+- Examples
+  - Python's `dict`
+  - keywords of a programming language (for, if, while) to highlight it
+    are often stored in a hash table
+  - File systems: The mapping from path+file to the physical location
+  - Password hashes, using special cryptographic hash functions
+  - Storage optimization, e.g. for Dropbox storing duplicate files
+
+##### Hash Functions
+
+##### Searching Functions
+
+##### Distributed Hash Tables
 
 ### Week 5 - Binary Search Trees
 
