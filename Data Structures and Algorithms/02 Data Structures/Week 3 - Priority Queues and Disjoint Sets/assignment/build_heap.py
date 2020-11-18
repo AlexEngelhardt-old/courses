@@ -39,7 +39,7 @@ def build_min_heap(data):
     swaps = []
     first_parent = (len(data)-2) // 2
     for i in range(first_parent, -1, -1):
-        swaps.append(sift_down(data, i))
+        swaps.extend(sift_down(data, i))
     return swaps
 
 
