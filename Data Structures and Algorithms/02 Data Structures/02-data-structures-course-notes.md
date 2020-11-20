@@ -411,11 +411,171 @@ Then the operations can be implemented:
   - Password hashes, using special cryptographic hash functions
   - Storage optimization, e.g. for Dropbox storing duplicate files
 
+- Web Service
+  - hosts with different 32-bit IPv4 addresses access it
+    - IPv6 uses 128-bit
+  - You want to defend against DOS attacks by analyzing access logs:
+    datetime, IP address
+  - 1h of log file can contain millions of lines
+    - so keep **count**: how many times each IP appears in the last 1h of logs
+	  - increment the counts for "now", decrement it for those that will now be
+        more than 1h ago
+	- **Use a data structure C (like Python's dict) to map IP to counters**
+
+```
+# i counts the first not-yet-processed row in the logfile
+# j counts the first row in the current 1h-spanning window
+# each second, we'll increase the 1h-counter for each new log, and decrease it
+#   for each now-deprecated log
+
+while log[i].time <= now():
+    C[log[i].IP] += 1
+    i += 1
+while log[j].time <= now()-3600sec:
+    C[log[j].IP] -= 1
+    j += 1
+```
+
+- **Direct Addressing**
+  - How to implement a O(1) access data structure `C`?
+  - Surely not with a size 2^32 array :)
+    - Access and update would be O(1), but you need 2^32 memory cells. IPv6
+      wouldn't work anymore
+- **List-based mapping**
+  - Storing all IPs in a list (multiple times if it accessed the website
+    multiple times) solves the memory problem, but now searching for an IP and
+    counting accesses is O(n)
+- **Hash Functions** solve the two drawbacks mentioned above
+  - A hash function h encodes *any* object from a set S into a "small" integer
+    <= m (m is called the **cardinality** of a hash function h)
+    - h should be fast to compute
+    - We want different values for different objects
+	  - impossible for |S| > m
+    - We want direct addressing with O(m) memory
+  - A **map** from S to V is a data structure with methods:
+    - `HasKey(s)`
+    - `Get(s)`
+    - `Set(s, v)`
+  - A **collision** is when two objects result in the same hash
+    - Solve collisions via **chaining**: Combine direct addressing and
+      list-based mapping
+      - Each possible hash value gets a *chain* of hashed IPs
+      - Then `HasKey` is implemented by running through the (entire!) respective
+        hash's list
+    - Memory consumption is O(n+m) for n elements and hash cardinality m
+    - Time consumption is O(c+1), c is length of longest sublist
+    - **Goal**: make both m and c small, by using a clever hash function
+
+- A **Set** is a data structure with methods
+  - `Add(o)`
+  - `Remove(o)`
+  - `Find(o)`
+- Implement a set like a *map*, but store just the keys, no values
+
+- A **hash table** is an implementation of a set or map using hashing
+
 ##### Hash Functions
 
-##### Searching Functions
+- The speed of a Hash Table depends a lot on the choice of hash function
+- **Phone book problem**
+  - add and delete contacts
+  - look up name given phone#
+  - look up phone# given name
+- You need **two maps**. name->number and number->name
 
-##### Distributed Hash Tables
+
+- `n` phone numbers stored
+- `m` - cardinality of hash function
+- `c` - length of the longest chain
+- `O(n+m)` memory is used
+- `alpha = n/m` is called the *load factor*: How "filled up" is the hash table?
+  - You want alpha to be between 0.5 and 1. So on average, each hash value
+    should contain at most 1 element!
+- We want small m and small c
+
+
+- **Dynamic Hash Tables**, if you don't know the number of keys in advance
+  - Copy the idea of dynamic arrays! Start with a **small hash table**, then
+    increase it as soon as alpha becomes too large
+	- That requires a *re-hash*, a new hash function with twice the cardinality
+	  - Remember, the *amortized* runtime of that move is O(1)
+
+
+- **Universal Family**: A set of hash functions where the probability of
+  collision for two distinct elements is < 1/m
+    - "Probability" taken over a random choice from the hash function family
+- Choose your hash function h **randomly** from the universal family H
+  - Do that random choice only once, at the beginning, woah?
+- **Hashing integers**
+  - A universal family for hashing integers efficiently:
+  - hash phone numbers up to length 7
+  - Choose prime number p larget than 10^7, e.g. p=10 000 019
+  - Choose hash table size, e.g. m=1 000
+  - Lemma: This hash family is a universal family:
+    h(x) = ((ax + b) mod p) mod m
+    for a and b from 0 (bzw. 1) to p-1,
+	x must be < p; otherwise there exists x and y s.t. *any* hash function of
+    the family has a colision
+- **Hashing strings**
+  - we should use *all* characters to avoid collisions
+  - convert each char to an int, and a big prime number p
+  - Define **polynomial hash functions**
+    - Probability of collision is at most L/p, where L is the max string length
+	  - shorter strings => less collision probability!!!
+      - runtime: O(L), doesn't depend on p
+      - it's important to know and use *large* prime numbers p
+    - Their cardinality is p-1. Fix it to m by integer hashing the resulting hash :)
+	  - Then the collision probability is at most 1/m + L/p
+        - That's *not a universal family* because the prob is > 1/m. *But* we
+          can choose a huge p (p > mL) so that the probability is < 2/m, i.e. O(1/m)
+
+
+##### Searching Patterns
+
+- Given a text T and a pattern P, find all occurrences of P in T
+- Define substring notation: S="abcde", then S[0..4] = "abcde", S[1..3] = "bcd",
+  S[2..2] = "c"
+- **Find pattern in text**
+  - Input: Strings T and P
+  - Output: All positions i in T, s.t. T[i .. i+|P|-1] = P
+  - Naive algo running time is O(|T| * |P|)
+  - **Rabin-Karp Algorithm** is faster by using hashing
+    - Note: If h(P) != h(S), then *definitely* P != S
+      - If h(P) == h(S), then *maybe* P == S. And *only then* call the expensive
+        function `StringsAreEqual(P, S)`
+    - Hash all of T's substrings of length |P|. If the hashes are equal, then
+      check if the strings are equal.
+    - The prob. of a "false alarm" can be made small by choosing a large p >> |T|*|Þ|
+    - Right now, this is still `O(|T|*|P|)`. We'll improve it by 
+	- *Precomputing all hashes in a recurrent manner (from back to front)*:
+    - Idea: The polynomial hashes of two consecutive substrings of T are very
+      similar. One, given the other, can be computed in constant time:
+      - H[i] = x * H[i+1] + stuff mod p
+    - Now we're `O(|T| + |P|)`, woo hoo!
+
+##### Distributed Hash Tables (optional)
+
+- **Applications for hashes**
+  - Strings, texts, pattern matching
+  - Data Science (huh!!)
+  - *Distributed systems (this lesson)*
+- Dropbox stores file copies just once:
+  - Compare hashes of newly to-be-uploaded file
+  - If there's something equal, compare files byte-by-byte, and if equal, don't
+    upload, just store a link
+  - Compute *multiple* different hash functions. If they're all equal, don't
+    even compare the file byte-by-byte, but assume the files are equal :)
+
+
+- **Big Data**
+- Problem: Billions of files uploaded daily, trillions of files stored
+- Too big for a simple hash table
+- Solution
+  - Get 1000 computers
+  - Create a hash table on each of them
+  - Computer i owns the object `h(object) mod 1000 == i`
+  - Store several copies of the data to defend against computers breaking
+  - Use **Consistent Hashing** now.
 
 ### Week 5 - Binary Search Trees
 
