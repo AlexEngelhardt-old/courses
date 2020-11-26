@@ -579,4 +579,155 @@ while log[j].time <= now()-3600sec:
 
 ### Week 5 - Binary Search Trees
 
+- A **Local Search Datastructure** stores elements in an ordered set.
+  It supports:
+  - `RangeSearch(x, y)`: Returns all elemeents with keys between x and y
+  - `NearestNeighbors(z)`: Returns the element with keys on the left+right of z
+- And we can modify it:
+  - `Insert(x)`
+  - `Delete(x)`
+
+##### Binary Search Trees
+
+- How to implement that structure?
+- With a hash table, insert and delete are O(1), but `RangeSearch` and
+  `NearestNeighbors` are impossible :(
+- In an unordered array, RangeSearch and NearestNeighbors are O(n)
+- In a sorted array, RangeSearch and NearestNeighbors are O(log n) now!
+  - But Insert and Delete are O(n)
+- In a linked list, even if sorted, Insert and Delete are O(1), but RangeSearch
+  and NearestNeighbors are O(n)
+
+
+- A *sorted array* is the closest one to what we want.
+- A *search tree* is a structure that naturally implements the binary search
+  idea.
+
+- **Implementation**
+  - `Find(K, R)` finds the node in the tree of root R with key K
+    - implement that recursively by using R of *sub*-trees
+    - If K doesn't exist, you can return the node where it *would* go.
+  - `Next(N)` returns the node with the next largest key than node N
+    - if N has right child, go there, then left as often as you can
+    - else, go up to the next ancestor that's larger than N
+  - `RangeSearch(from, to)` is just `Find(from)` followed by many `Next`s until
+     you're larger than `to`.
+  - `NearestNeighbors` is `Next` and `Previous` (implemented analogously)
+  - `Insert(K, R)`: P=Find(K, R). Add K as a child of P, on the appropriate side
+  - `Delete(N)`: 
+    - If N has no right child: Remove N, promote N.Left
+    - If N has right child: X = Next(N). Note that X does not have a left
+      child. Replace N by X, then promote X.Right (the original X's location,
+      that is; not the position X is in *after* swapping) to fill the now empty
+      slot where X used to be.
+- **Runtime and Balance**
+  - We want shallow trees again. A high height leads to long runtimes.
+  - Balance: We want left and right subtrees to be of approx. the same size
+    - Ideally, tree is log2(n) deep
+  - **Rotations: Rearranging a tree**: 
+    - A rotation swaps a node X with its [left/right] parent while maintaining
+      the sorted order
+    - Source:
+	  - X
+        - Y
+	      - A
+          - B
+	    - C
+    - Destination:
+	  - Y
+	    - A
+        - X
+	      - B
+          - C
+```
+RotateRight(X):
+	P = X.Parent
+	Y = X.Left
+	B = Y.Right
+	Y.Parent = P
+	P.AppropriateChild = Y
+	X.Parent = Y, Y.Right = X
+	B.Parent = X, X.Left = B
+```
+
+- How to keep a tree balanced? Use AVL trees!
+
+##### AVL Trees
+
+- AVL trees implement all operations in O(log n)
+
+
+- Define a node N's **height** as the number of nodes downwards (including node
+  N)
+- Store a node's height as a property now
+- The AVL property: For all nodes N, the height of their right and left subtrees
+  is at most 1 apart
+  - The AVL property implies that the total tree height is O(log n)
+
+
+- TODO: I mentally skipped the video "AVL Tree Implementation" 
+- **Inserting**
+  - Inserting a new leaf node may change the height of all its direct ancestors
+    (and no other nodes)
+  - `AVLInsert(k, R)`: Insert k, N = Find(k), then rebalance node N:
+    - **Rebalancing**
+	  - Only if |N.left.height - N.right.height| > 1:
+	    - we know it's unbalanced by exactly 2 (if we rebalance every time)
+        - TODO eh, too complicated to write that algorithm out
+- **Deleting**
+  - Delete(N) as before. Then Rebalance the parent of the *old* position of the
+    node replacing N.
+
+
+- **Splitting and Merging AVL trees**
+  - Merging two trees where all keys in left are smaller than all keys in right
+    - Delete largest element from left tree. Use that as new root. Add left to
+      left, and right to right
+  - Splitting at a key k, s.t. left is all <k, right subtree is all >k
+    - We're leaving out key k in the two results!
+
+
 ### Week 6 - Binary Search Trees 2
+
+
+##### Applications
+
+- **Compute order statistics in BSTs: 7th largest element, median, 25%
+    percentile**
+- For order statistics, we need to know the *number of items* in a subtree (not
+  just its *height*)
+  - N.size is N.left.size + N.right.size + 1
+  - After rotating a tree, you must recompute size of old root and new root
+
+
+- **Use trees to store and manipulate sequential lists of elements**
+  - Have an array of squares, each colored black or white
+    - [BBWBWBWBWWBWBWBBBWBBB]
+  - We want to be able to flip all squares' colors after an index x
+  - `NewArray(n)` creates n white squares
+  - `Color(m)` returns color of m-th square
+  - `Flip(x)`. Flips collors of all squares with index > x
+- A new use for trees: Store elements in a sorted order
+  - You can build a BST that holds the letters "ALGORITHMS" s.t. a sorted output
+    spells this array of chars again
+- Have two trees: One with the current color configuration, one with the exact
+  opposite.
+  - Then you can flip lights by splitting and merging those trees around:
+```
+Flip(x):
+	(L1, R1) = Split(T1, x)
+	(L2, R2) = Split(T2, x)
+	Merge(L1, R2) -> T1
+	Merge(L2, R1) -> T2
+```
+
+##### Splay Trees
+
+TODO I just almost completely skipped this section
+
+- They have a `splay` operation
+- Idea: Sometimes unbalanced trees are better if the items higher up in the
+  unbalanced tree are searched for more frequently.
+  - But we don't know which nodes are commonly searched
+    - Every time you find a key, bring it a bit closer to the root
+- Splaying slowly makes the tree more balanced

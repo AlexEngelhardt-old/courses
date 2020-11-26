@@ -45,6 +45,7 @@ class Solver:
 		self.x = random.randint(1, 10 ** 9)  # the integer for the polyhash
 		self.n_buckets = 10**9 + 7
 
+		# TODO I should have used more than one hash function as per problem statement; e.g. one with buckets=10**9 + 9
 		self.substr_hashes = [0 for _ in range(len(s)+1)]
 		for i in range(1, len(self.s)+1):
 			self.substr_hashes[i] = (self.substr_hashes[i-1]*self.x + ord(self.s[i-1])) % self.n_buckets
