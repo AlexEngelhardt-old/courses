@@ -1,13 +1,27 @@
-def explore(adj, src, visited=None):
+def explore(adj, src, visited=None, previsit=None, postvisit=None, clock=0):
     if visited is None:
         visited = [False for _ in range(len(adj))]
+    if previsit is None:
+        previsit = [0 for _ in range(len(adj))]
+    if postvisit is None:
+        postvisit = [0 for _ in range(len(adj))]
     visited[src] = True
+    # <previsit>
+    previsit[src] = clock
+    clock += 1
+    # </previsit>
     for dest in adj[src]:
         if not visited[dest]:
-            explore(adj, dest, visited)
+            _, visited, previsit, postvisit, clock = explore(adj, dest, visited, previsit, postvisit, clock)
+    # <postvisit>
+    postvisit[src] = clock
+    clock += 1
+    # </postvisit>
 
+    # TODO that may be wrong, because we include vertices found in previous calls to explore. Do we intend that?
     found_vertices = [i for i in range(len(adj)) if visited[i]]
-    return found_vertices, visited
+
+    return found_vertices, visited, previsit, postvisit, clock
 
 
 def find_sink(adj, v=0):
@@ -29,15 +43,29 @@ def reverse_graph(adj):
 def DFS(adj):
     # Make sure to return the pre- and especially post-order numbers.
     # We need them for topological sort
-    CC = [0 for _ in range(len(adj))]
     previsit = [0 for _ in range(len(adj))]
     postvisit = [0 for _ in range(len(adj))]
     visited = [False for _ in range(len(adj))]
-
-    cc_ctr = 1
+    clock = 0
     for v in range(len(adj)):
         if not visited[v]:
-            found_vertices, visited = explore(adj, v, visited)
-            for v in found_vertices:
-                CC[v] = cc_ctr
-            cc_ctr += 1
+            found_vertices, visited, previsit, postvisit, clock = explore(adj, v, visited, previsit, postvisit, clock)
+    assert sum(visited) == len(visited)
+    return previsit, postvisit
+
+
+def SCCs(adj):
+    CC = [0 for _ in range(len(adj))]  # strongly connected components
+
+    _, postvisit = DFS(reverse_graph(adj))
+    cc_ctr = 1
+    while max(postvisit) > 0:
+        v = postvisit.index(max(postvisit))
+        found_vertices, _, _, _, _ = explore(adj, v)
+        for fv in found_vertices:
+            if CC[fv] == 0:  # if it's untouched, that is
+                CC[fv] = cc_ctr
+            postvisit[fv] = 0  # just remove them
+        cc_ctr += 1
+
+    return CC

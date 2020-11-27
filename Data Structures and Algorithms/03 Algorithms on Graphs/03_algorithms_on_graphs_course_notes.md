@@ -125,6 +125,75 @@ def previsit(v):  # same for postvisit
 
 # Week 2 - Decomposition of Graphs 2 (Directed Graphs)
 
+- DAGs, topological orders, and creating a program for analyzing a CS curriculum
+- The edges now have a *start* and *end* vertex
+- DFS still works if you only follow *directed* edges.
+
+- Tasks we want:
+  - Get a *Linear Ordering* of tasks whose dependencies are stored in a DAG
+  - Any (**acyclic**) DAG has a linear ordering. But cycles don't work!
+
+- **Topological Sort**
+  - A **source** vertex has no incoming edges
+  - A **sink** vertex has no outgoing edges
+  - **LinearOrder(G):**
+    - Find a sink
+	  - Follow any path as far as possible. You *will* find a sink (because the
+        graph is acyclic)
+    - Put at the end of the ordering
+    - Remove it from graph
+    - Repeat
+- Runtime of LinearOrder: O(|V|) paths, each takes O(|V|) time => O(|V|^2)
+  - Speed it up:
+    - Only back up as far as necessary.
+	  - This is exactly the Depth-First Search algorithm (the post-order)!
+  - So: **TopologicalSort(G)** == DFS(G), then sort vertices by reverse
+    post-order
+
+- **Strongly Connected Components** in directed (but cyclic) graphs
+  - a bit more complex than in undirected graphs; there are three possible
+    scenarios for two vertices A and B:
+    - A and B are connected by edges in any direction (but none may be reachable
+      from the other)
+      - So you can't split them into different islands, but you also can't reach
+        one from the other
+    - A is reachable from B, but B not from A
+    - Both are reachable from the other
+	  - They are **connected**
+- In strongly connected components, any node is reachable from any other
+  - See ![scc](strongly-connected-components.png)
+  - You can draw a **metagraph** of the SCCs
+    - See ![metagraph](metagraph.png)
+    - The metagraph is always a DAG
+
+
+- **How to compute the SCCs?**
+  - Given a directed (cyclic obv.) graph G, get its SCCs
+  - A simple algorithm `EasySCC` runs in O(|V|^2 + |V|*|E|)
+  - Faster algo:
+    - Find a *sink SCC* (a sink in the Metagraph)
+	  - because exploring within a sink SCC you can be sure you won't ever land
+        in a different SCC
+    - It's easy to find a *source SCC* (the one with the largest *post-visit*
+      number. So: **Reverse the Graph**. G^R is G with all edges reversed
+      (trivial to compute).
+    - And G^R and G have the same SCCs!
+    - So: Find sink components of G by running DFS on G^R
+- Final SCC Algorithm:
+```
+def SCCs(G):
+	run DFS(G^R)
+	let v have the largest post number
+	run Explore(v)
+	vertices found are the first SCC
+	remove them from G and repeat
+```
+- You don't need to rerun DFS every time you remove a SCC. Just use the next
+  highest post number in the initially computed DFS
+- Essentially you run DFS on G^R, and then on G.
+  - Runtime: O(|V| + |E|)
+  
+
 # Week 3 - Paths in Graphs 1
 
 # Week 4 - Paths in Graphs 2
