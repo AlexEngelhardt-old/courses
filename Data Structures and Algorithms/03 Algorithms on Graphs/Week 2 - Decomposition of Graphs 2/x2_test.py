@@ -1,3 +1,4 @@
+import cProfile
 from x2_toposort import toposort
 
 adj = [
@@ -18,3 +19,5 @@ adj = [
 ]
 
 print(toposort(adj))
+
+# cProfile.run('toposort(adj)')
