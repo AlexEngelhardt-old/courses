@@ -7,6 +7,7 @@ sys.setrecursionlimit(200000)
 def number_of_strongly_connected_components(adj):
     return max(SCCs(adj))
 
+
 if __name__ == '__main__':
     input = sys.stdin.read()
     data = list(map(int, input.split()))

@@ -7,8 +7,8 @@ adj = [
     [3, 4],
     [],
     []
-] * 1000
+]
 
 print(SCCs(adj))
 
-cProfile.run('SCCs(adj)')
+cProfile.run('SCCs(adj*1000)')
