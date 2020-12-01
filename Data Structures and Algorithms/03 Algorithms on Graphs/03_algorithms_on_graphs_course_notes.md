@@ -194,9 +194,119 @@ def SCCs(G):
   - Runtime: O(|V| + |E|)
   
 
-# Week 3 - Paths in Graphs 1
+# Week 3 - Paths in Graphs 1 - Shortest paths in undirected graphs
 
-# Week 4 - Paths in Graphs 2
+- Network packets
+- Flight routes:
+  - What is the minimum number of flight segments to go from Hamburg to Moscow?
+  - This one (and some other examples here) works on *directed* graphs though
+- Car navigation
+- Currency exchanges (yes rly)
+
+### Most Direct Route
+
+- *Length* of a path L(P) is the number of edges it walks
+- The *Distance* between two vertices is the length of the shortest path between
+  them
+  - If you can't reach B from A, D(A, B) = infinity
+- Finding the (shortest) distance from A to B is approximately the same problem
+  than finding *all distances from A* in the graph.
+  - BFS helps here
+
+- **Distance Layers**
+  - See ![distance layers](distance-layers.png)
+  - There can be no edge from layer i to layer i+2 (or more). All edges go from
+    layer i to layer i+1.
+  - The distance between two vertices is the layer of the target vertex, when
+    the source vertex is in layer 0
+
+### Breadth-First Search
+
+*Works the same for directed and undirected graphs*
+
+Starting from a vertex V:
+
+- Initialize all nodes' distance with infinity
+- Discover and process the origin node V (layer 0)
+- discover layer 1: All edges from the origin node. Process them:
+- Take all outgoing nodes from them and discover layer 2. Ignore all edges that
+  lead to nodes you already have discovered.
+- etc.
+- As soon as a layer leads to only already-known nodes, you're done.
+- All nodes you haven't discovered yet will have the distance infinity.
+
+
+- When implementing this, put all discovered nodes into a *queue*:
+  - Discover all nodes
+  - Only then process them
+
+
+```
+def BFS(G, S):
+	# Graph G
+	# Origin node S
+
+	dist = []  # the distances from S to all other nodes
+
+	for all u in V:  # all the graph's vertices
+		dist[u] = infinity
+
+	dist[S] = 0
+	queue = [S]  # queue contains already discovered nodes
+
+	while queue is not empty:
+		u = dequeue(queue)
+		for all (u, v) in Edges:  # ideally, traverse the adjacency list
+			if dist[v] == infinity  # i.e. if the destination is yet unknown
+				enqueue(queue, v)  # this means "discovering v"
+				dist[v] = dist[u] + 1
+```
+
+- Running time of BFS: O(|E| + |V|)
+
+### Shortest Path Tree
+
+- It's a tree with node S at the root (the node where BFS started),
+  and all *distance layers*.
+- It is in fact a tree, i.e. it contains no cycles
+
+To construct this tree, amend the `BFS()` algo by adding the `prev` array:
+
+```
+def BFS(G, S):
+	# Graph G
+	# Origin node S
+
+	dist = []  # the distances from S to all other nodes
+
+	for all u in V:  # all the graph's vertices
+		dist[u] = infinity
+		prev[u] = nil
+
+	dist[S] = 0
+	queue = [S]  # queue contains already discovered nodes
+
+	while queue is not empty:
+		u = dequeue(queue)
+		for all (u, v) in Edges:  # ideally, traverse the adjacency list
+			if dist[v] == infinity  # i.e. if the destination is yet unknown
+				enqueue(queue, v)  # this means "discovering v"
+				dist[v] = dist[u] + 1
+				prev[v] = u
+```
+
+Then to reconstruct the shortest path from S to u (given the tree `prev`):
+
+```
+def ReconstructPath(S, u, prev):
+	result = empty
+	while u != S:
+		result.append(u)
+		u = prev[u]
+	return reversed(result)
+```
+
+# Week 4 - Paths in Graphs 2 - Shortest paths in weighted graphs
 
 # Week 5 - Minimum Spanning Trees
 
