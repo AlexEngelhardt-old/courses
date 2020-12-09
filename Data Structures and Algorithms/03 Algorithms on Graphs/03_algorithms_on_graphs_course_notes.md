@@ -308,6 +308,164 @@ def ReconstructPath(S, u, prev):
 
 # Week 4 - Paths in Graphs 2 - Shortest paths in weighted graphs
 
+### Fastest Route
+
+- e.g. in navigation app
+- Naive algorithm
+  - Note that in an optimal path, any subpath there is also optimal
+  - Store distances dist[v] as *upper bound* on the actual distance from S to v
+
+  - *Edge relaxation* for an edge (u, v): Is it better to go from S to v through
+    the node u? Does it improve the current value of dist[v]?
+
+```
+def Relax((u, v)):
+	if dist[v] > dist[u] + w(u, v):
+		dist[v] = dist[u] + w(u, v)
+		prev[v] = u  # Remember that the node from which we came to v is now u
+```
+
+```
+def Naive(G, S):
+	for all u in V:  # vertices
+		dist[u] = infty
+		prev[u] = nil
+	dist[S] = 0  # the source vertex
+	do:
+		relax all the edges
+	while at least one `dist` changes
+```
+
+##### Dijkstra's Algorithm
+
+- It's an efficient algorithm to find the shortest path from an original node in
+  the graph to all the nodes in the graph with weighted edges where all the
+  weights are non-negative
+- **Main Idea**: Maintain a set R of vertices for which `dist` is already set
+  correctly (the "known region").
+  - In the beginning, the region R is just the starting node S
+  - On each iteration we take a vertex outside of R with minimal `dist`, add it
+    to R (cuz it's now optimal), and relax all its outgoing edges
+
+
+```
+def Dijkstra(G, S):
+	for all u in V:
+		dist[u] = infty
+		prev[u] = nil
+	dist[S] = 0
+	H = MakeQueue(V)  # a priority queue with dist-values as keys
+
+	while H is not empty:
+		u = ExtractMin(H)  # remove and return the node with min distance
+		for all (u, v) in G.Edges:
+			if dist[v] > dist[u] + w(u, v):
+				dist[v] = dist[u] + w(u, v)
+				prev[v] = u
+				ChangePriority(H, v, dist[v])
+```
+
+- Running time: T(MakeQueue) + |V| * T(ExtractMin) + |E| * T(ChangePriority)
+  - actual running time then depends on which data structures you choose:
+    - If the Priority Queue is implemented as two arrays (`current_dist` and
+	  `node_is_removed`), O(|V| + |V|^2 + |E|) = O(|V|^2)
+	  - because ChangePriority is constant time, but ExtractMin is O(|V|)
+    - With a Binary Heap (== a prioriy queue), then ChangePriority is the most
+      expensive operation:
+      - O(|V| + |V| log |V| + |E| log |V|) = O((|V|+|E|) log |V|)
+- The Binary Heap version is faster if number of edges is small enough, i.e. not
+  in the order of |V|^2. In that case the running time would be O(|V|^2 * log
+  |V|)
+	
+
+### Currency Exchange
+
+- What if some of the edge weights are negative?
+- Application: Given 1000 RUB, what path to exchange them s.t. you have maximum
+  amount of USD?
+- Formalized problem: Given weighted directed graph, maximize the **product**
+  over the edges from USD to RUB. I.e. find a _best_ path, but now not best in
+  the sense of minimum weight sum, but maximum weight product.
+  - *Maximizing the product of the weights == minimizing the sum of the negative*
+    log of the weigths. **So you're reducing it to a known problem!**
+- Note: There can be an infinite number of paths, if you walk over an arbitrage
+  exchange of, say, 3 currencies many times.
+
+
+- Dijkstra doesn't work anymore when you can have negative edge weights
+- Main problem: **Negative Weight Cycles**
+  - If there is any cycle with the total weight sum being negative, you can just
+    walk that circle forever. The distance to any node reachable from that cycle
+    is minus infinity!
+
+###### Bellman-Ford Algorithm
+
+- Because Dijkstra doesn't work anymore
+- It's very similar to the `Naive` algorithm discussed above.
+  - It's slower, but it works with negative edges
+
+```
+def BellmanFord(G, S):
+	# assume no negative weight cycles in G
+	# Otherwise, it'll still "work", but will return incorrect distances for some nodes
+
+	for all vertices u in V:
+		dist[u] = infty
+		prev[u] = nil
+
+	dist[S] = 0
+
+	repeat |V|-1 times:
+		for all (u, v) in Edges:
+	        # relax *all* edges in iteration 1, not just those reachable from S
+			Relax(u, v)
+		break, if no relaxation changes anything anymore
+	
+	
+```
+
+- Runtime of BF: O(|V|*|E|)
+  - Longer than Dijkstra, but works with negative weights
+
+- Proof of correctness hinges on the Lemma that  
+	After k iterations of relaxations, for any node u, the dist[u] is the smallest length
+	of a path from S to U that contains at most k edges
+
+##### How to find negative cycles
+
+- Use this Lemma:  
+  A graph contains a negative cycle if and only if the |V|-th (additional)
+  iteration of BellmanFord(G, S) updates some dist-value.
+
+- Algorithm:
+  - Run |V| iterations of Bellman-Ford, save the node v relaxed on the last iteration
+  - This node v is reachable from a negative cycle
+  - Walk back the path |V| times via `prev[v]`. *Now* you will definitely be
+    *on* the cycle.
+  - From there, just store the current vertex x and walk back until you reach x again.
+
+##### Infinite Arbitrage
+
+- It is possible to get an infinite amount of the target currency (vertex) u iff
+  u is reachable from some node w for which dist[w] decreased on iteration |V| of
+  Bellman-Ford.
+  - Cause this means you have a negative cycle *from which* you can reach your
+    target currency.
+
+- Algorithm to detect IA:
+  - Do |V| iterations of Bellman-Ford, save all nodes relaxed on the |V|-th iteration
+    in a set A
+  - Put all nodes from A into a queue Q
+  - Do breadth-first search with queue Q and find all nodes reachable from A
+    - (Only) Those will be the nodes for which IA will be possible
+
+- Augment the BFS algo: During BFS, you must remember the "parent" of each
+  visited node; the node from which you discovered it
+- This way you can reconstruct the path to u from some node w relaxed on iteration |V|
+- Go back from w to find negative cycle from which w is reachable
+- Use this negative cycle to achieve infinite arbitrage from S to u
+  
+
 # Week 5 - Minimum Spanning Trees
 
 # Week 6 - Advanced Shortest Paths Project
